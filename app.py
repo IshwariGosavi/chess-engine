@@ -5,7 +5,7 @@ exposes API endpoints the frontend calls to make moves and get
 the engine's response.
 """
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template
 import chess
 from engine.search import get_best_move
 
@@ -19,7 +19,7 @@ board = chess.Board()
 
 @app.route("/")
 def home():
-    return "Chess engine server is running!"
+    return render_template("index.html")
 
 
 @app.route("/api/board")
