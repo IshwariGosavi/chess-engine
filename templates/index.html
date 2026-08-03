@@ -32,11 +32,73 @@
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 
     <script>
-        var board = Chessboard('board', {
+        var board = null;
+
+        function onDragStart(source, piece, position, orientation) {
+            // Don't allow moving pieces if the game is already over
+            // (we'll refine this further in a later day)
+            return true;
+        }
+
+        function onDrop(source, target) {
+    var moveUci = source + target;
+
+    // Ask the server if this move is legal, synchronously blocking
+    // the drop until we know — we use a placeholder return here,
+    // then correct the board once the async response comes back.
+
+    fetch('/api/human-move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ move: moveUci })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            // Illegal move — force the board back to the server's
+            // last known correct position.
+            fetch('/api/board')
+                .then(response => response.json())
+                .then(boardData => {
+                    board.position(boardData.fen);
+                });
+            return;
+        }
+
+        // Legal move — update to match server's new state
+        board.position(data.fen);
+
+        if (data.is_game_over) {
+            alert("Game over!");
+            return;
+        }
+
+        // Ask the engine to make its move
+        fetch('/api/engine-move')
+            .then(response => response.json())
+            .then(engineData => {
+                board.position(engineData.fen);
+                if (engineData.is_game_over) {
+                    alert("Game over!");
+                }
+            });
+    });
+
+    // Since our move validation is async (happens after this function
+    // returns), we don't use chessboard.js's 'snapback' return value here.
+    // Instead we let the illegal move visually happen for a split second,
+    // then correct it above once we hear back from the server.
+}
+
+        var config = {
             draggable: true,
             position: 'start',
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
-        });
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+            onDragStart: onDragStart,
+            onDrop: onDrop
+        };
+
+        board = Chessboard('board', config);
     </script>
 
 </body>
