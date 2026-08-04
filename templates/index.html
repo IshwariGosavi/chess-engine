@@ -23,7 +23,17 @@
 <body>
 
     <h1>Chess Engine</h1>
-    <div id="board"></div>
+
+    <div style="display: flex; gap: 40px; align-items: flex-start;">
+        <div>
+            <div id="board"></div>
+            <button id="newGameBtn" style="margin-top: 20px; padding: 10px 20px; font-size: 16px;">New Game</button>
+        </div>
+        <div>
+            <h3>Moves</h3>
+            <table id="moveList" style="border-collapse: collapse; min-width: 150px;"></table>
+        </div>
+    </div>
 
     <!-- jQuery (chessboard.js dependency) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -40,65 +50,111 @@
             return true;
         }
 
-        function onDrop(source, target) {
-    var moveUci = source + target;
+        function renderMoveList(moves) {
+            var table = document.getElementById('moveList');
+            table.innerHTML = '';  // clear existing rows
 
-    // Ask the server if this move is legal, synchronously blocking
-    // the drop until we know — we use a placeholder return here,
-    // then correct the board once the async response comes back.
+            for (var i = 0; i < moves.length; i += 2) {
+                var moveNumber = (i / 2) + 1;
+                var whiteMove = moves[i] || '';
+                var blackMove = moves[i + 1] || '';
 
-    fetch('/api/human-move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ move: moveUci })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            // Illegal move — force the board back to the server's
-            // last known correct position.
-            fetch('/api/board')
+                var row = document.createElement('tr');
+                row.innerHTML =
+                    '<td style="padding: 4px 8px; color: #888;">' + moveNumber + '.</td>' +
+                    '<td style="padding: 4px 8px; font-weight: bold;">' + whiteMove + '</td>' +
+                    '<td style="padding: 4px 8px;">' + blackMove + '</td>';
+                table.appendChild(row);
+            }
+        }
+
+        function updateMoveList() {
+            fetch('/api/moves')
                 .then(response => response.json())
-                .then(boardData => {
-                    board.position(boardData.fen);
+                .then(data => {
+                    renderMoveList(data.moves);
                 });
-            return;
         }
 
-        // Legal move — update to match server's new state
-        board.position(data.fen);
+        function onDrop(source, target, piece) {
+            var moveUci = source + target;
 
-        if (data.is_game_over) {
-            alert("Game over!");
-            return;
-        }
+            // Check if this is a pawn reaching the final rank (promotion)
+            var isPawn = piece === 'wP' || piece === 'bP';
+            var reachedLastRank = target[1] === '8' || target[1] === '1';
 
-        // Ask the engine to make its move
-        fetch('/api/engine-move')
+            if (isPawn && reachedLastRank) {
+                moveUci += 'q';  // auto-promote to queen for now
+            }
+
+            // Try the move on the server
+            fetch('/api/human-move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ move: moveUci })
+            })
             .then(response => response.json())
-            .then(engineData => {
-                board.position(engineData.fen);
-                if (engineData.is_game_over) {
-                    alert("Game over!");
+            .then(data => {
+                if (data.error) {
+                    // Illegal move — force the board back to the server's
+                    // last known correct position.
+                    fetch('/api/board')
+                        .then(response => response.json())
+                        .then(boardData => {
+                            board.position(boardData.fen, false);
+                        });
+                    return;
                 }
-            });
-    });
 
-    // Since our move validation is async (happens after this function
-    // returns), we don't use chessboard.js's 'snapback' return value here.
-    // Instead we let the illegal move visually happen for a split second,
-    // then correct it above once we hear back from the server.
-}
+                // Legal move — update to match server's new state
+                board.position(data.fen, false);
+                updateMoveList();
+
+                if (data.is_game_over) {
+                    alert("Game over!");
+                    return;
+                }
+
+                // Ask the engine to make its move
+                fetch('/api/engine-move')
+                    .then(response => response.json())
+                    .then(engineData => {
+                        board.position(engineData.fen, false);
+                        updateMoveList();
+                        if (engineData.is_game_over) {
+                            alert("Game over!");
+                        }
+                    });
+            });
+        }
 
         var config = {
             draggable: true,
-            position: 'start',
+            position: 'start',   // temporary placeholder, corrected below
             pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
             onDragStart: onDragStart,
             onDrop: onDrop
         };
 
         board = Chessboard('board', config);
+
+        // On page load, sync the visual board with whatever the server
+        // actually has right now — don't assume it's a fresh game.
+        fetch('/api/board')
+            .then(response => response.json())
+            .then(data => {
+                board.position(data.fen, false);
+                updateMoveList();
+            });
+
+        document.getElementById('newGameBtn').addEventListener('click', function() {
+            fetch('/api/reset', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    board.position(data.fen, false);
+                    updateMoveList();
+                });
+        });
     </script>
 
 </body>

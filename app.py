@@ -1,4 +1,6 @@
 """
+app.py
+
 The Flask web server. This sits between the browser (frontend)
 and the chess engine (engine/ folder). It serves the webpage and
 exposes API endpoints the frontend calls to make moves and get
@@ -15,6 +17,7 @@ app = Flask(__name__)
 # (This is fine for a solo local project — a real multi-user app
 # would need to track a separate board per session/user.)
 board = chess.Board()
+move_history = []  # stores moves in SAN format, e.g. ["e4", "e5", "Nf3", ...]
 
 
 @app.route("/")
@@ -35,31 +38,12 @@ def get_board():
     })
 
 
-@app.route("/api/engine-move")
-def engine_move():
-    """
-    Asks the engine to calculate and play its best move
-    on the current board, then returns the updated position.
-    """
-    if board.is_game_over():
-        return jsonify({"error": "Game is already over"}), 400
-
-    best_move = get_best_move(board, depth=3)
-    board.push(best_move)
-
-    return jsonify({
-        "move": best_move.uci(),
-        "fen": board.fen(),
-        "is_game_over": board.is_game_over()
-    })
-
 @app.route("/api/human-move", methods=["POST"])
 def human_move():
     """
     Accepts a move from the human player (in UCI format, e.g. 'e2e4'),
     validates it's legal, and plays it if so.
     """
-
     data = request.get_json()
     move_uci = data.get("move")
 
@@ -71,18 +55,49 @@ def human_move():
     if move not in board.legal_moves:
         return jsonify({"error": "Illegal move"}), 400
 
+    san = board.san(move)  # get notation BEFORE pushing
     board.push(move)
+    move_history.append(san)
 
     return jsonify({
         "fen": board.fen(),
         "is_game_over": board.is_game_over()
     })
 
+
+@app.route("/api/engine-move")
+def engine_move():
+    """
+    Asks the engine to calculate and play its best move
+    on the current board, then returns the updated position.
+    """
+    if board.is_game_over():
+        return jsonify({"error": "Game is already over"}), 400
+
+    best_move = get_best_move(board, depth=3)
+    san = board.san(best_move)  # get notation BEFORE pushing
+    board.push(best_move)
+    move_history.append(san)
+
+    return jsonify({
+        "move": best_move.uci(),
+        "fen": board.fen(),
+        "is_game_over": board.is_game_over()
+    })
+
+
+@app.route("/api/moves")
+def get_moves():
+    """Returns the full move history in SAN notation."""
+    return jsonify({"moves": move_history})
+
+
 @app.route("/api/reset", methods=["POST"])
 def reset_board():
     """Resets the board to the starting position."""
-    global board
+    global board, move_history
     board = chess.Board()
+    move_history = []
     return jsonify({"fen": board.fen()})
 
 
