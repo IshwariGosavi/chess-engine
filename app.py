@@ -100,6 +100,36 @@ def reset_board():
     move_history = []
     return jsonify({"fen": board.fen()})
 
+@app.route("/api/undo", methods=["POST"])
+def undo_move():
+    """
+    Undoes the last two half-moves (your move + the engine's reply),
+    so the human always gets their turn back.
+    If there's only one move so far (engine hasn't replied yet,
+    or it's the very first move), undoes just that one.
+    """
+    global move_history
+
+    moves_undone = 0
+
+    if len(board.move_stack) > 0:
+        board.pop()
+        move_history.pop()
+        moves_undone += 1
+
+    if len(board.move_stack) > 0 and moves_undone == 1:
+        # Only undo a second move if it makes sense to (i.e., there
+        # was a pair) — this keeps behavior sensible even if undo is
+        # clicked right after just one move exists.
+        board.pop()
+        move_history.pop()
+        moves_undone += 1
+
+    return jsonify({
+        "fen": board.fen(),
+        "moves_undone": moves_undone
+    })
+
 
 if __name__ == "__main__":
     app.run(debug=True)

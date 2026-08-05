@@ -28,6 +28,7 @@
         <div>
             <div id="board"></div>
             <button id="newGameBtn" style="margin-top: 20px; padding: 10px 20px; font-size: 16px;">New Game</button>
+            <button id="undoBtn" style="margin-top: 20px; margin-left: 10px; padding: 10px 20px; font-size: 16px;">Undo</button>
         </div>
         <div>
             <h3>Moves</h3>
@@ -149,6 +150,15 @@
 
         document.getElementById('newGameBtn').addEventListener('click', function() {
             fetch('/api/reset', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    board.position(data.fen, false);
+                    updateMoveList();
+                });
+        });
+
+        document.getElementById('undoBtn').addEventListener('click', function() {
+            fetch('/api/undo', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
                     board.position(data.fen, false);
