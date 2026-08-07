@@ -3,7 +3,6 @@
 <head>
     <title>Chess Engine</title>
 
-    <!-- chessboard.js CSS -->
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 
     <style>
@@ -34,6 +33,7 @@
             <div id="board"></div>
             <button id="newGameBtn" style="margin-top: 20px; padding: 10px 20px; font-size: 16px;">New Game</button>
             <button id="undoBtn" style="margin-top: 20px; margin-left: 10px; padding: 10px 20px; font-size: 16px;">Undo</button>
+            <button id="resignBtn" style="margin-top: 20px; margin-left: 10px; padding: 10px 20px; font-size: 16px; background-color: #d9534f; color: white;">Resign</button>
         </div>
         <div>
             <h3>Moves</h3>
@@ -41,24 +41,23 @@
         </div>
     </div>
 
-    <!-- jQuery (chessboard.js dependency) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <!-- chessboard.js -->
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 
     <script>
         var board = null;
+        var gameLocked = false;  // true once the game has ended (checkmate/resign)
 
         function onDragStart(source, piece, position, orientation) {
-            // Don't allow moving pieces if the game is already over
-            // (we'll refine this further in a later day)
+            if (gameLocked) {
+                return false;  // block dragging entirely once game is over
+            }
             return true;
         }
 
         function renderMoveList(moves) {
             var table = document.getElementById('moveList');
-            table.innerHTML = '';  // clear existing rows
+            table.innerHTML = '';
 
             for (var i = 0; i < moves.length; i += 2) {
                 var moveNumber = (i / 2) + 1;
@@ -85,15 +84,13 @@
         function onDrop(source, target, piece) {
             var moveUci = source + target;
 
-            // Check if this is a pawn reaching the final rank (promotion)
             var isPawn = piece === 'wP' || piece === 'bP';
             var reachedLastRank = target[1] === '8' || target[1] === '1';
 
             if (isPawn && reachedLastRank) {
-                moveUci += 'q';  // auto-promote to queen for now
+                moveUci += 'q';
             }
 
-            // Try the move on the server
             fetch('/api/human-move', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -102,8 +99,6 @@
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    // Illegal move — force the board back to the server's
-                    // last known correct position.
                     fetch('/api/board')
                         .then(response => response.json())
                         .then(boardData => {
@@ -112,16 +107,15 @@
                     return;
                 }
 
-                // Legal move — update to match server's new state
                 board.position(data.fen, false);
                 updateMoveList();
 
                 if (data.is_game_over) {
+                    gameLocked = true;
                     alert("Game over!");
                     return;
                 }
 
-                // Only call the engine if we're in bot mode
                 if (data.mode === "bot") {
                     fetch('/api/engine-move')
                         .then(response => response.json())
@@ -129,6 +123,7 @@
                             board.position(engineData.fen, false);
                             updateMoveList();
                             if (engineData.is_game_over) {
+                                gameLocked = true;
                                 alert("Game over!");
                             }
                         });
@@ -156,6 +151,7 @@
             .then(data => {
                 document.getElementById('modeSelect').style.display = 'none';
                 document.getElementById('gameArea').style.display = 'flex';
+                gameLocked = false;
                 board.position(data.fen, false);
                 updateMoveList();
             });
@@ -173,6 +169,7 @@
             fetch('/api/reset', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
+                    gameLocked = false;
                     board.position(data.fen, false);
                     updateMoveList();
                 });
@@ -182,10 +179,38 @@
             fetch('/api/undo', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
+                    gameLocked = false;
                     board.position(data.fen, false);
                     updateMoveList();
                 });
         });
+
+        document.getElementById('resignBtn').addEventListener('click', function() {
+            fetch('/api/resign', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        return;
+                    }
+                    gameLocked = true;
+                    alert(data.message);
+                });
+        });
+
+        // On page load: check if a game is already in progress on the
+        // server (e.g. the user refreshed mid-game) and restore it,
+        // instead of always showing the mode-select screen.
+        fetch('/api/board')
+            .then(response => response.json())
+            .then(data => {
+                if (data.game_started) {
+                    document.getElementById('modeSelect').style.display = 'none';
+                    document.getElementById('gameArea').style.display = 'flex';
+                    gameLocked = data.is_game_over;
+                    board.position(data.fen, false);
+                    updateMoveList();
+                }
+            });
     </script>
 
 </body>
