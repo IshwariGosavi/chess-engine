@@ -18,6 +18,7 @@ app = Flask(__name__)
 # would need to track a separate board per session/user.)
 board = chess.Board()
 move_history = []  # stores moves in SAN format, e.g. ["e4", "e5", "Nf3", ...]
+game_mode = "bot"  # can be "bot" or "friend"
 
 
 @app.route("/")
@@ -61,7 +62,8 @@ def human_move():
 
     return jsonify({
         "fen": board.fen(),
-        "is_game_over": board.is_game_over()
+        "is_game_over": board.is_game_over(),
+        "mode": game_mode
     })
 
 
@@ -92,14 +94,6 @@ def get_moves():
     return jsonify({"moves": move_history})
 
 
-@app.route("/api/reset", methods=["POST"])
-def reset_board():
-    """Resets the board to the starting position."""
-    global board, move_history
-    board = chess.Board()
-    move_history = []
-    return jsonify({"fen": board.fen()})
-
 @app.route("/api/undo", methods=["POST"])
 def undo_move():
     """
@@ -118,9 +112,6 @@ def undo_move():
         moves_undone += 1
 
     if len(board.move_stack) > 0 and moves_undone == 1:
-        # Only undo a second move if it makes sense to (i.e., there
-        # was a pair) — this keeps behavior sensible even if undo is
-        # clicked right after just one move exists.
         board.pop()
         move_history.pop()
         moves_undone += 1
@@ -129,6 +120,33 @@ def undo_move():
         "fen": board.fen(),
         "moves_undone": moves_undone
     })
+
+
+@app.route("/api/reset", methods=["POST"])
+def reset_board():
+    """Resets the board to the starting position."""
+    global board, move_history
+    board = chess.Board()
+    move_history = []
+    return jsonify({"fen": board.fen()})
+
+
+@app.route("/api/set-mode", methods=["POST"])
+def set_mode():
+    """Sets the game mode ('bot' or 'friend') and resets the board."""
+    global board, move_history, game_mode
+
+    data = request.get_json()
+    mode = data.get("mode")
+
+    if mode not in ["bot", "friend"]:
+        return jsonify({"error": "Invalid mode"}), 400
+
+    game_mode = mode
+    board = chess.Board()
+    move_history = []
+
+    return jsonify({"fen": board.fen(), "mode": game_mode})
 
 
 if __name__ == "__main__":

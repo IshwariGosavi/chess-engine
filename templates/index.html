@@ -24,7 +24,12 @@
 
     <h1>Chess Engine</h1>
 
-    <div style="display: flex; gap: 40px; align-items: flex-start;">
+    <div id="modeSelect">
+        <button id="modeBotBtn" style="padding: 12px 24px; font-size: 16px; margin-right: 10px;">Play a Bot</button>
+        <button id="modeFriendBtn" style="padding: 12px 24px; font-size: 16px;">Play a Friend</button>
+    </div>
+
+    <div id="gameArea" style="display: none; gap: 40px; align-items: flex-start;">
         <div>
             <div id="board"></div>
             <button id="newGameBtn" style="margin-top: 20px; padding: 10px 20px; font-size: 16px;">New Game</button>
@@ -116,22 +121,24 @@
                     return;
                 }
 
-                // Ask the engine to make its move
-                fetch('/api/engine-move')
-                    .then(response => response.json())
-                    .then(engineData => {
-                        board.position(engineData.fen, false);
-                        updateMoveList();
-                        if (engineData.is_game_over) {
-                            alert("Game over!");
-                        }
-                    });
+                // Only call the engine if we're in bot mode
+                if (data.mode === "bot") {
+                    fetch('/api/engine-move')
+                        .then(response => response.json())
+                        .then(engineData => {
+                            board.position(engineData.fen, false);
+                            updateMoveList();
+                            if (engineData.is_game_over) {
+                                alert("Game over!");
+                            }
+                        });
+                }
             });
         }
 
         var config = {
             draggable: true,
-            position: 'start',   // temporary placeholder, corrected below
+            position: 'start',
             pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
             onDragStart: onDragStart,
             onDrop: onDrop
@@ -139,14 +146,28 @@
 
         board = Chessboard('board', config);
 
-        // On page load, sync the visual board with whatever the server
-        // actually has right now — don't assume it's a fresh game.
-        fetch('/api/board')
+        function startGame(mode) {
+            fetch('/api/set-mode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: mode })
+            })
             .then(response => response.json())
             .then(data => {
+                document.getElementById('modeSelect').style.display = 'none';
+                document.getElementById('gameArea').style.display = 'flex';
                 board.position(data.fen, false);
                 updateMoveList();
             });
+        }
+
+        document.getElementById('modeBotBtn').addEventListener('click', function() {
+            startGame('bot');
+        });
+
+        document.getElementById('modeFriendBtn').addEventListener('click', function() {
+            startGame('friend');
+        });
 
         document.getElementById('newGameBtn').addEventListener('click', function() {
             fetch('/api/reset', { method: 'POST' })
