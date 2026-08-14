@@ -6,13 +6,13 @@ A full-stack chess engine built from scratch, featuring a custom AI opponent pow
 
 - **Two game modes:** Play against the AI bot, or play locally against a friend (two humans, one board)
 - **AI opponent** using Minimax search with Alpha-Beta pruning, evaluating positions using material count and piece-square tables
-- **Legal move enforcement** — illegal moves are rejected and the board snaps back
+- **Legal move enforcement** : illegal moves are rejected and the board snaps back
 - **Move history** displayed in standard algebraic notation (SAN), e.g. `1. e4 e5 2. Nf3 Nc6`
-- **Undo** — reverses the last full round of moves
-- **Resign** — end the game and declare the opponent the winner
+- **Undo** : reverses the last full round of moves
+- **Resign** : end the game and declare the opponent the winner
 - **Game-over detection** with specific reasons shown (checkmate, stalemate, draw by repetition, insufficient material, or resignation)
 - **Pawn promotion** (auto-promotes to queen)
-- **Persistent game state** — refreshing the page restores your game in progress
+- **Persistent game state** : refreshing the page restores your game in progress
 
 ## Tech Stack
 
