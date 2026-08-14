@@ -22,6 +22,7 @@
 <body>
 
     <h1>Chess Engine</h1>
+    <div id="gameOverBanner" style="display: none; background-color: #f0ad4e; color: white; padding: 12px 20px; border-radius: 6px; font-size: 18px; font-weight: bold; margin-bottom: 10px;"></div>
 
     <div id="modeSelect">
         <button id="modeBotBtn" style="padding: 12px 24px; font-size: 16px; margin-right: 10px;">Play a Bot</button>
@@ -46,11 +47,11 @@
 
     <script>
         var board = null;
-        var gameLocked = false;  // true once the game has ended (checkmate/resign)
+        var gameLocked = false;
 
         function onDragStart(source, piece, position, orientation) {
             if (gameLocked) {
-                return false;  // block dragging entirely once game is over
+                return false;
             }
             return true;
         }
@@ -79,6 +80,17 @@
                 .then(data => {
                     renderMoveList(data.moves);
                 });
+        }
+
+        function showGameOverBanner(message) {
+            var banner = document.getElementById('gameOverBanner');
+            banner.textContent = message;
+            banner.style.display = 'block';
+        }
+
+        function hideGameOverBanner() {
+            var banner = document.getElementById('gameOverBanner');
+            banner.style.display = 'none';
         }
 
         function onDrop(source, target, piece) {
@@ -112,7 +124,7 @@
 
                 if (data.is_game_over) {
                     gameLocked = true;
-                    alert("Game over!");
+                    showGameOverBanner(data.game_over_message);
                     return;
                 }
 
@@ -124,7 +136,7 @@
                             updateMoveList();
                             if (engineData.is_game_over) {
                                 gameLocked = true;
-                                alert("Game over!");
+                                showGameOverBanner(engineData.game_over_message);
                             }
                         });
                 }
@@ -152,6 +164,7 @@
                 document.getElementById('modeSelect').style.display = 'none';
                 document.getElementById('gameArea').style.display = 'flex';
                 gameLocked = false;
+                hideGameOverBanner();
                 board.position(data.fen, false);
                 updateMoveList();
             });
@@ -170,6 +183,7 @@
                 .then(response => response.json())
                 .then(data => {
                     gameLocked = false;
+                    hideGameOverBanner();
                     board.position(data.fen, false);
                     updateMoveList();
                 });
@@ -180,6 +194,7 @@
                 .then(response => response.json())
                 .then(data => {
                     gameLocked = false;
+                    hideGameOverBanner();
                     board.position(data.fen, false);
                     updateMoveList();
                 });
@@ -193,7 +208,7 @@
                         return;
                     }
                     gameLocked = true;
-                    alert(data.message);
+                    showGameOverBanner(data.message);
                 });
         });
 
@@ -207,6 +222,9 @@
                     document.getElementById('modeSelect').style.display = 'none';
                     document.getElementById('gameArea').style.display = 'flex';
                     gameLocked = data.is_game_over;
+                    if (data.is_game_over && data.game_over_message) {
+                        showGameOverBanner(data.game_over_message);
+                    }
                     board.position(data.fen, false);
                     updateMoveList();
                 }

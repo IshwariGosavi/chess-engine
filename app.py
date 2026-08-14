@@ -21,6 +21,33 @@ game_over_flag = False     # true if the game ended via resignation
 game_over_message = None   # e.g. "White wins by resignation!"
 
 
+def get_game_over_message():
+    """
+    Returns a human-readable explanation of how the game ended,
+    checking resignation first, then python-chess's own outcome info.
+    """
+    if game_over_flag:
+        return game_over_message
+
+    outcome = board.outcome()
+    if outcome is None:
+        return None
+
+    if outcome.termination == chess.Termination.CHECKMATE:
+        winner = "White" if outcome.winner else "Black"
+        return winner + " wins by checkmate!"
+    elif outcome.termination == chess.Termination.STALEMATE:
+        return "Draw by stalemate."
+    elif outcome.termination == chess.Termination.INSUFFICIENT_MATERIAL:
+        return "Draw by insufficient material."
+    elif outcome.termination == chess.Termination.FIVEFOLD_REPETITION:
+        return "Draw by repetition."
+    elif outcome.termination == chess.Termination.SEVENTYFIVE_MOVES:
+        return "Draw by the 75-move rule."
+    else:
+        return "Game over."
+
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -38,7 +65,7 @@ def get_board():
         "turn": "white" if board.turn == chess.WHITE else "black",
         "mode": game_mode,
         "game_started": game_started,
-        "game_over_message": game_over_message
+        "game_over_message": get_game_over_message()
     })
 
 
@@ -65,7 +92,8 @@ def human_move():
     return jsonify({
         "fen": board.fen(),
         "is_game_over": board.is_game_over(),
-        "mode": game_mode
+        "mode": game_mode,
+        "game_over_message": get_game_over_message()
     })
 
 
@@ -82,7 +110,8 @@ def engine_move():
     return jsonify({
         "move": best_move.uci(),
         "fen": board.fen(),
-        "is_game_over": board.is_game_over()
+        "is_game_over": board.is_game_over(),
+        "game_over_message": get_game_over_message()
     })
 
 
@@ -107,8 +136,6 @@ def undo_move():
         move_history.pop()
         moves_undone += 1
 
-    # Undoing always un-ends the game — covers both checkmate
-    # and resignation cases.
     game_over_flag = False
     game_over_message = None
 
