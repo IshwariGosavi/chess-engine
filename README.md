@@ -109,4 +109,4 @@ chess-engine/
 
 ## Author
 
-Built by Ishwari Gosavi as a solo AI mini-project, focused on implementing adversarial search (Minimax + Alpha-Beta pruning) and heuristic evaluation from first principles.
+Ishwari Gosavi
