@@ -122,6 +122,11 @@ def get_moves():
 
 @app.route("/api/undo", methods=["POST"])
 def undo_move():
+    """
+    Undoes the last two half-moves (your move + the engine's reply),
+    so the human always gets their turn back. Stays within the
+    current game/mode — does not return to mode selection.
+    """
     global move_history, game_over_flag, game_over_message
 
     moves_undone = 0
@@ -147,11 +152,17 @@ def undo_move():
 
 @app.route("/api/reset", methods=["POST"])
 def reset_board():
-    global board, move_history, game_over_flag, game_over_message
+    """
+    Resets the board AND returns the app to an unstarted state,
+    so the player has to explicitly pick a mode again instead of
+    silently continuing in whatever mode they were last in.
+    """
+    global board, move_history, game_over_flag, game_over_message, game_started
     board = chess.Board()
     move_history = []
     game_over_flag = False
     game_over_message = None
+    game_started = False
     return jsonify({"fen": board.fen()})
 
 

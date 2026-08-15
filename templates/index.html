@@ -186,6 +186,11 @@
                     hideGameOverBanner();
                     board.position(data.fen, false);
                     updateMoveList();
+
+                    // Return to mode selection instead of assuming the
+                    // same mode should continue.
+                    document.getElementById('gameArea').style.display = 'none';
+                    document.getElementById('modeSelect').style.display = 'block';
                 });
         });
 
