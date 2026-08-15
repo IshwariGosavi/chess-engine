@@ -2,7 +2,7 @@
 
 A full-stack chess engine built from scratch, featuring a custom AI opponent powered by the Minimax algorithm with Alpha-Beta pruning. Play against the bot or challenge a friend, right in the browser.
 
-🔗 **Live demo:**https://chess-engine-wwmm.onrender.com
+🔗 **Live demo:** https://chess-engine-wwmm.onrender.com
 
 ## Features
 
