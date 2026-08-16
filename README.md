@@ -1,6 +1,6 @@
 # Chess Engine
 
-A full-stack chess engine built from scratch, featuring a custom AI opponent powered by the Minimax algorithm with Alpha-Beta pruning. Play against the bot or challenge a friend, right in the browser.
+A full-stack chess engine built from scratch, featuring a custom AI bot powered by the Minimax algorithm with Alpha-Beta pruning. Play against the bot or challenge a friend, right in the browser.
 
 🔗 **Live demo:** https://chess-engine-wwmm.onrender.com
 
@@ -11,7 +11,7 @@ A full-stack chess engine built from scratch, featuring a custom AI opponent pow
 - **Legal move enforcement** : illegal moves are rejected and the board snaps back
 - **Move history** displayed in standard algebraic notation (SAN), e.g. `1. e4 e5 2. Nf3 Nc6`
 - **Undo** : reverses the last full round of moves
-- **Resign** : end the game and declare the opponent the winner
+- **Resign** : end the game and declare the opponent as the winner
 - **Game-over detection** with specific reasons shown (checkmate, stalemate, draw by repetition, insufficient material, or resignation)
 - **Pawn promotion** (auto-promotes to queen)
 - **Persistent game state** : refreshing the page restores your game in progress
