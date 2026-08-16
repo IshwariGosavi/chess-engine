@@ -3,6 +3,7 @@
 A full-stack chess engine built from scratch, featuring a custom AI bot powered by the Minimax algorithm with Alpha-Beta pruning. Play against the bot or challenge a friend, right in the browser.
 
 🔗 **Live demo:** https://chess-engine-wwmm.onrender.com
+> Note: hosted on a free tier, so the first load might take 30-50 seconds if the site has been inactive.
 
 ## Features
 
